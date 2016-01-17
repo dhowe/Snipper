@@ -5,7 +5,6 @@ import java.util.ArrayList;
 
 import pitaru.sonia.*;
 import processing.core.*;
-import util.AudioUtils;
 import util.SoniaUtils;
 
 public class SampleRecordLoop extends PApplet {

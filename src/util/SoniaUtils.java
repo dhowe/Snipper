@@ -10,6 +10,8 @@ import com.softsynth.jsyn.Synth;
 
 public class SoniaUtils
 {
+	static float NOISE_THRESHOLD = 0.001f;
+	
 	static final int SAMPLE_RATE = 44100;
 	static final float INPUT_SENSITIVITY = 1.5f;
   static final float BASE_MIDI_C = 8.1758224f;
@@ -22,10 +24,6 @@ public class SoniaUtils
   	return frames;
 	}
 	
-	public static float[] wavePoints(Sample s, int waveWidth, boolean scaled) {
-		
-		return AudioUtils.wavePoints(frames(s), waveWidth, scaled);
-	}
 	
   public static void listAudioDevices() {
   	
@@ -87,30 +85,87 @@ public class SoniaUtils
     s.write(tmp);
   }
  	
-	public static void computeWaveForm(PGraphics p, Sample s, int w, int h)
+	public static void computeWaveForm(PApplet p, Sample s, int w, int h, float noiseThreshold)
 	{
-		computeWaveForm(p, SoniaUtils.frames(s));
+		computeWaveForm(p.createGraphics(w, h), SoniaUtils.frames(s), noiseThreshold);
 	}
 	 
 	public static void computeWaveForm(PGraphics waveform, float[] frames) {
 		computeWaveForm(waveform, frames, true);
 	}
 	
+	public static void computeWaveForm(PGraphics waveform, float[] frames, boolean scaled) {
+		computeWaveForm(waveform, frames, NOISE_THRESHOLD, scaled);
+	}
+	
+	public static void computeWaveForm(PGraphics waveform, float[] frames, float noiseThreshold) {
+		computeWaveForm(waveform, frames, noiseThreshold, true);
+	}
+	
 	/**
 	 * Draws a waveForm into the PGraphics object 
 	 */
- 	public static void computeWaveForm(PGraphics waveform, float[] frames, boolean scaled) 
+ 	public static void computeWaveFormY(PGraphics waveform, float[] frames, float noiseThreshold, boolean scaled) 
   {	
     float center = waveform.height/2f;
-    float[] pts = AudioUtils.wavePoints(frames, waveform.width, scaled);
+    float[] pts = AudioUtils.wavePoints(frames, waveform.width, noiseThreshold, scaled);
     
     waveform.beginDraw();
     waveform.background(0);
     waveform.stroke(220);
     
+    for (int i = 0; i < pts.length; i++) {
+    	float y1 = center + (pts[i]   * waveform.height/2f);
+    	float y2 = center - (pts[i]   * waveform.height/2f);
+      waveform.line(i, y1, i, y2);
+    }
+    waveform.endDraw();   
+  }
+ 	
+ 	public static void computeWaveForm(PGraphics waveform, float[] frames, float noiseThreshold, boolean scaled) 
+  {	
+    float center = waveform.height/2f;
+    float[] pts = AudioUtils.wavePoints(frames, waveform.width, noiseThreshold, scaled);
+    
+    waveform.beginDraw();
+    waveform.background(0);
+    //\waveform.stroke(220);
+    
+	  for (int i = 0; i < pts.length-1; i++) {
+	  	
+	    float y1 = center + (pts[i]   * center);
+	    float y2 = center - (pts[i+1] * center);
+
+	    waveform.stroke(220);
+	    waveform.line(i, y1, i+1, y2);
+	    
+	    if (y1>center && y2>center) {
+	      waveform.stroke(165);
+	      waveform.line(i, center+1, i, y1 - 1);
+	    }
+	    if (y1<center && y2<center) {
+	      waveform.stroke(165);
+	      waveform.line(i, center-1, i, y1 + 1);
+	    }
+	  }
+	  
+    waveform.endDraw();   
+  }
+  
+	/**
+	 * Draws a waveForm into the PGraphics object 
+   */
+ 	public static void computeWaveFormX(PGraphics waveform, float[] frames, float noiseThreshold, boolean scaled) 
+  {	
+    float center = waveform.height/2f;
+    float[] pts = AudioUtils.wavePoints(frames, waveform.width, noiseThreshold, scaled);
+    
+    waveform.beginDraw();
+    waveform.background(0);
+    waveform.stroke(220);
     for (int i = 0; i < pts.length-1; i++) {
       float y1 = center + (pts[i]   * waveform.height/2f);
-      float y2 = center + (pts[i+1] * waveform.height/2f);
+      float y2 = center - (pts[i+1]   * waveform.height/2f);
       waveform.line(i, y1, i+1, y2);
     }
 

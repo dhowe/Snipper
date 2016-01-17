@@ -9,7 +9,7 @@ import util.SoniaUtils;
 public class Burst {
 
 	static float SILENCE_THRESHOLD = .005f;
-	static float SOUND_THRESHOLD = .01f;
+	static float SOUND_THRESHOLD = .1f;
 	
 	Sample computed;
 	float[] frames; // should this be a clone of the array?
@@ -54,39 +54,50 @@ public class Burst {
 
 	public static void getBursts(float[] frames, float soundThresh,
 			float silenceThresh, ArrayList<Burst> result) {
+		_getBursts(0, frames.length-1, frames, soundThresh, silenceThresh, result);
+	}
 
-		System.out.println("SampleRecordLoop.getBursts(" + result.size() + ") :: "+ frames.length);
+	private static void _getBursts(int startIdx, int length, float[] frames, 
+			float soundThresh, float silenceThresh, ArrayList<Burst> result) {
+
+		boolean dbug = true;
 		
-		Burst burst = getMaxBurst(frames, soundThresh, silenceThresh);
+		if (dbug) System.out.println("Burst.getBursts(" + result.size() + ") :: "+ frames.length);
+		
+		Burst burst = _getMaxBurst(startIdx, length, frames, soundThresh, silenceThresh);
 
-		if (burst == null)
-			return;
-
-		result.add(burst);
-		//System.out.println("ADDED[" + result.size() + "] " + burst + " ");
-
-		//System.out.println("CHECKING: 0-" + (burst.start - 1));
-		if (burst.start > AudioUtils.SAMPLE_RATE / 10) { // at least 1/10 of sec
-			float[] beg = AudioUtils.subset(burst.frames, 0, burst.start - 1);
-			getBursts(beg, soundThresh, silenceThresh, result);
-		}
-
-		//System.out.println("CHECKING: " + (burst.stop + 1) + "-" + frames.length);
-		if (burst.stop < frames.length - AudioUtils.SAMPLE_RATE / 10) { // at least
-																																		// 1/10 of
-																																		// sec
-			float[] end = AudioUtils.subset(burst.frames, burst.stop + 1,
-					burst.frames.length - (burst.stop + 1));
-			getBursts(end, soundThresh, silenceThresh, result);
+		if (burst != null) {
+		
+			result.add(burst);
+			
+			if (dbug) System.out.println("ADDED[" + result.size() + "] " + burst + " ");
+	
+			if (burst.start > AudioUtils.SAMPLE_RATE / 10) { // at least 1/10 of sec
+			
+				if (dbug) System.out.println("Trying: 0-" + (burst.start - 1));
+				
+				//float[] beg = AudioUtils.subset(burst.frames, 0, burst.start - 1);
+				
+				getBursts(0, frames, soundThresh, silenceThresh, result);
+			}
+	
+			if (burst.stop < frames.length - (AudioUtils.SAMPLE_RATE / 10)) { // >= 1/10 sec
+				
+				if (dbug) System.out.println("Trying: " + (burst.stop + 1) + "-" + frames.length);
+			
+				//float[] end = AudioUtils.subset(burst.frames, burst.stop + 1, burst.frames.length - (burst.stop + 1));
+				
+				getBursts(end, soundThresh, silenceThresh, result);
+			}
 		}
 	}
 
-	static Burst getMaxBurst(Sample sample, float soundThresh, float silenceThresh) {
+//	static Burst getMaxBurst(Sample sample, float soundThresh, float silenceThresh) {
+//
+//		return getMaxBurst(SoniaUtils.frames(sample), soundThresh, silenceThresh);
+//	}
 
-		return getMaxBurst(SoniaUtils.frames(sample), soundThresh, silenceThresh);
-	}
-
-	static Burst getMaxBurst(float[] frames, float soundThresh, float silenceThresh) {
+	private static Burst _getMaxBurst(int start, int end, float[] frames, float soundThresh, float silenceThresh) {
 
 		int maxIdx = AudioUtils.absMaxIndex(frames, soundThresh);
 		
@@ -119,8 +130,8 @@ public class Burst {
 			}
 		}
 
-		if (stopIndex == frames.length - 1)
-			System.out.println("[WARN] No stop point found");
+		//if (stopIndex == frames.length - 1)
+			//System.out.println("[WARN] No stop point found");
 
 		return stopIndex;
 	}

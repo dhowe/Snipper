@@ -20,16 +20,36 @@ public abstract class AudioUtils
     return (float) (12f * Math.log(freq/BASE_MIDI_C) / Math.log( 2.0f ));
   }
   
-  public static int maxIndex(float[] frames) {
-  	
-		return maxIndex(frames, -1);
+	// maxValue
+  
+	public static float absMaxValue(float[] frames) {
+		
+		return absMaxValue(frames, -Float.MAX_VALUE);
 	}
 	
-	public static int maxIndex(float[] frames, float minThreshold) {
+	public static float absMaxValue(float[] frames, float minThreshold) {
+		
+		return frames[ absMaxIndex(frames, minThreshold) ];
+	}
+	
+	// maxIndex
+  
+  public static int absMaxIndex(float[] frames) {
+  	
+		return absMaxIndex(frames, -Float.MAX_VALUE);
+	}
+	
+	public static int absMaxIndex(float[] frames, float minThreshold) {
+		return absMaxIndex(0, frames.length, frames, minThreshold);
+	}
+	
+	public static int absMaxIndex(int start, int length, float[] frames, float minThreshold) {
 			
 		int maxIdx = -1;
 		float max = minThreshold;
-		for (int i = 0; i < frames.length; i++) {
+		if (start + length > frames.length)
+			throw new RuntimeException("Out of bounds");
+		for (int i = start; i < start+length; i++) {
 			float f = Math.abs(frames[i]);
 			if (f > max) {
 				max = f;
@@ -38,38 +58,65 @@ public abstract class AudioUtils
 		}
 		return maxIdx;
 	}
-	
-	public static float maxValue(float[] frames) {
-		return maxValue(frames, -1);
-	}
-	
-	public static float maxValue(float[] frames, float minThreshold) {
-		
-		int maxIndex = maxIndex(frames, minThreshold);
-		if (maxIndex < 0) throw new RuntimeException("No max");
-		return frames[maxIndex];
-	}
-	
-	public static float[] wavePoints(float[] frames, int waveWidth, boolean normalized) {
+
+	public static float[] wavePoints(float[] frames, int waveWidth, float noiseThreshold, boolean normalized) {
 		
 		float[] pts = new float[waveWidth]; // 1 pt per pixel
-    float max = normalized ? maxValue(frames) : 1; // max level
+    float max = normalized ? absMaxValue(frames) : 1;
+    
+    //System.out.println( absMaxValue(frames));
     
     // sample positions 
-    int mod = Math.round(frames.length / (float)waveWidth);
-
-    // should calculate max over idx-mod/2 -> idx+mod/2  ??
-		for (int i = 0; i < pts.length; i++) { 
-			int idx = i * mod;
-			pts[i] = frames[idx] / max;
-		}
+    int idx, winStart, winEnd;
+    int samplesPerPixel = Math.round(frames.length / (float)waveWidth);
+    float[] window = null;
     
-    //pts[0] = pts[pts.length-1]; // first = last
+		for (int i = 0; i < pts.length-1; i++) {
+			
+			idx = i * samplesPerPixel;
+			
+			// calculate max() over idx-mod/2 -> idx+mod/2 
+			winStart = idx;
+			winEnd = Math.min(frames.length-1, idx + samplesPerPixel); 
+			window = subset(frames, winStart, winEnd-winStart);
+			
+			float val = absMaxValue(window) / max;
+			pts[i] =  val >= noiseThreshold ? val : 0; 
+		}
     
 		return pts;
 	}
 	
-  /**
+	public static float[] wavePointsX(float[] frames, int waveWidth, boolean normalized) {
+		
+		float[] pts = new float[waveWidth]; // 1 pt per pixel
+    float max = normalized ? absMaxValue(frames) : 1;
+    
+    System.out.println( absMaxValue(frames));
+    
+    // sample positions 
+    int idx, winStart, winEnd;
+    int samplesPerPixel = Math.round(frames.length / (float)waveWidth);
+    float[] window = null;
+    
+		for (int i = 0; i < pts.length; i++) {
+			
+			idx = i * samplesPerPixel;
+			
+			// calculate max() over idx-mod/2 -> idx+mod/2 
+			winStart = Math.max(0, idx-(samplesPerPixel/2));
+			winEnd = Math.min(frames.length-1, winStart + samplesPerPixel); 
+			window = subset(frames, winStart, winEnd-winStart);
+			
+			pts[i] =  absMaxValue(window) / max;
+			//pts[i] = new float[] { minValue(window) / max, (maxValue(window) / max) }; 
+		}
+    
+		return pts;
+	}
+
+
+/**
    * Returns a sorted gaussian dist of size 'n', with values V1...Vn, 
    * where -.5 <= Vi <= .5  for all Vi.
    */
@@ -275,9 +322,9 @@ public abstract class AudioUtils
     //gaussianTest();
   }
 
-  public static float[] subset(float list[], int start, int count) { // from p5
+  public static float[] subset(float array[], int start, int count) { // from p5
     float output[] = new float[count];
-    System.arraycopy(list, start, output, 0, count);
+    System.arraycopy(array, start, output, 0, count);
     return output;
   }
 

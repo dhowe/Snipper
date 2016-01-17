@@ -7,20 +7,14 @@ import com.jsyn.devices.AudioDeviceManager;
 import com.jsyn.unitgen.*;
 
 public class RecBuffer {
-	
-	// Add octave-up/down (with pitch)
-	// Add reverse               
-	// Add tremolo ?
 
 	static int SAMPLE_RATE = 44100;
 
 	static Synthesizer synth;
 
-	VariableRateDataReader samplePlayer;
 	FixedRateMonoWriter writer;
 	FloatSample sample;
 	ChannelIn channelIn;
-	LineOut lineOut;
 
 	int numFrames;
 
@@ -32,27 +26,57 @@ public class RecBuffer {
 		synth.start(SAMPLE_RATE, AudioDeviceManager.USE_DEFAULT_DEVICE, 2,
 				AudioDeviceManager.USE_DEFAULT_DEVICE, 2);
 
-		this.setLength(lengthSec);
+		this.length(lengthSec);
 	}
 
-	public RecBuffer setLength(float lengthSec) {
+	public RecBuffer length(float lengthSec) {
 
 		this.numFrames = (int) (SAMPLE_RATE * lengthSec);
 		return this;
 	}
+	
+	public float length() {
 
+		return this.numFrames/SAMPLE_RATE;
+	}
+	
+	public int size() {
+
+		return this.numFrames;
+	}
+
+	public RecBuffer stop() {
+		
+		channelIn.output.disconnectAll();
+		writer.dataQueue.clear();
+		writer.stop();
+		
+		return this;
+	}
+	
 	public RecBuffer start() {
 
 		sample = new FloatSample(numFrames, 1);
-
 		channelIn.output.connect(writer.input);
 
 		writer.start(); // b/c writer is not pulled by anything
-		lineOut.start();
-
 		writer.dataQueue.queueLoop(sample, 0, sample.getNumFrames());
 		
 		return this;
+	}
+	
+	public boolean enabled() {
+
+		return channelIn.output.isConnected();
+	}
+	
+	public boolean toggleEnabled() {
+		if (enabled()) {
+			stop();
+			return false;
+		}
+		start();
+		return true;
 	}
 
 	public float[] getCurrentFrames() {
@@ -77,7 +101,7 @@ public class RecBuffer {
 		return sample;
 	}
 
-	void playFrames(FloatSample sample) {
+	/*void playFrames(FloatSample sample) {
 
 		if (lineOut == null) {
 			synth.add(lineOut = new LineOut());
@@ -105,7 +129,7 @@ public class RecBuffer {
 			e.printStackTrace();
 		}
 		System.out.println("DONE");
-	}
+	}*/
 
 	public static void main(String[] args) {
 
@@ -125,24 +149,8 @@ public class RecBuffer {
 		System.out.println("DONE");
 		
 		FloatSample fs = createSample(recBuffer.getCurrentFrames());
-		Player.playSample(synth, recBuffer.lineOut, fs, true);
+		//Player.playSample(synth, recBuffer.lineOut, fs, true);
 
 		synth.stop();
 	}
-
-	public boolean enabled() {
-		// ...
-		return false;
-	}
-	
-	public RecBuffer enabled(boolean val) {
-		// ...
-		return this;
-	}
-	
-	public boolean toggleEnabled() {
-		// ...
-		return enabled();
-	}
-
 }
