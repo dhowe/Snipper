@@ -1,4 +1,4 @@
-package pdelay;
+package snipper;
 
 import processing.core.PApplet;
 import processing.core.PGraphics;

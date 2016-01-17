@@ -1,4 +1,4 @@
-package pdelay;
+package snipper;
 
 import com.jsyn.JSyn;
 import com.jsyn.Synthesizer;

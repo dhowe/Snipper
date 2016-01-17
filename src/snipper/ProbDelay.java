@@ -1,4 +1,4 @@
-package pdelay;
+package snipper;
 
 public class ProbDelay {
 

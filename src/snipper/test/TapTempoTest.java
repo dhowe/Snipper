@@ -1,4 +1,4 @@
-package pdelay.test;
+package snipper.test;
 import pitaru.sonia.Sonia;
 import processing.core.PApplet;
 import util.TapTempo;

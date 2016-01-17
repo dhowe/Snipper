@@ -1,22 +1,19 @@
-package pdelay;
+package snipper;
 
 import com.jsyn.JSyn;
 import com.jsyn.Synthesizer;
 import com.jsyn.data.FloatSample;
 import com.jsyn.devices.AudioDeviceManager;
 import com.jsyn.unitgen.*;
+import com.softsynth.jsyn.Synth;
+import com.softsynth.jsyn.SynthContext;
 
-public class RecBuffer {
-	
-	// Add octave-up/down (with pitch)
-	// Add reverse               
-	// Add tremolo ?
+public class RecBufferPre {
 
 	static int SAMPLE_RATE = 44100;
 
 	static Synthesizer synth;
 
-	VariableRateDataReader samplePlayer;
 	FixedRateMonoWriter writer;
 	FloatSample sample;
 	ChannelIn channelIn;
@@ -24,24 +21,25 @@ public class RecBuffer {
 
 	int numFrames;
 
-	public RecBuffer(Synthesizer synth, float lengthSec) {
+	public RecBufferPre(Synthesizer synth, float lengthSec) {
 
-		synth.add(channelIn = new ChannelIn());
+		SynthContext context = Synth.getSharedContext();
+		channelIn = new ChannelIn();
+		lineOut = new LineOut();
 		synth.add(writer = new FixedRateMonoWriter());
-		
 		synth.start(SAMPLE_RATE, AudioDeviceManager.USE_DEFAULT_DEVICE, 2,
 				AudioDeviceManager.USE_DEFAULT_DEVICE, 2);
-
+		
 		this.setLength(lengthSec);
 	}
 
-	public RecBuffer setLength(float lengthSec) {
+	public RecBufferPre setLength(float lengthSec) {
 
 		this.numFrames = (int) (SAMPLE_RATE * lengthSec);
 		return this;
 	}
 
-	public RecBuffer start() {
+	public RecBufferPre start() {
 
 		sample = new FloatSample(numFrames, 1);
 
@@ -51,7 +49,7 @@ public class RecBuffer {
 		lineOut.start();
 
 		writer.dataQueue.queueLoop(sample, 0, sample.getNumFrames());
-		
+
 		return this;
 	}
 
@@ -71,27 +69,53 @@ public class RecBuffer {
 	}
 
 	static FloatSample createSample(float[] frames) {
-		
 		FloatSample sample = new FloatSample(frames);
 		sample.setFrameRate(SAMPLE_RATE);
 		return sample;
 	}
 
+	static void playFrames1(float[] frames) {
+
+		synth = JSyn.createSynthesizer();
+
+		FloatSample sample = new FloatSample(frames);
+		sample.setFrameRate(SAMPLE_RATE);
+		VariableRateDataReader samplePlayer = new VariableRateMonoReader();
+		LineOut lineOut = new LineOut();
+		synth.add(lineOut);
+		synth.add(samplePlayer);
+		samplePlayer.output.connect(0, lineOut.input, 0);
+		samplePlayer.rate.set(sample.getFrameRate());
+		synth.start();
+		lineOut.start();
+		samplePlayer.dataQueue.queue(sample);
+		System.out.println("GOT SAMPLE, PLAY TIL END");
+		try {
+			int i = 80;
+			do {
+				if ((++i % 20) == 19)
+					System.out.println();
+				System.out.print(".");
+				synth.sleepFor(.1);
+			} while (samplePlayer.dataQueue.hasMore());
+
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("DONE");
+	}
+
 	void playFrames(FloatSample sample) {
 
-		if (lineOut == null) {
-			synth.add(lineOut = new LineOut());
-			lineOut.start();
-		}
-		if (samplePlayer == null) {
-			synth.add(samplePlayer = new VariableRateMonoReader());
-			samplePlayer.output.connect(0, lineOut.input, 0);
-		}
-		
-		samplePlayer.dataQueue.clear();
+		VariableRateDataReader samplePlayer = new VariableRateMonoReader();
+		synth.add(samplePlayer);
+
+		samplePlayer.output.connect(0, lineOut.input, 0);
 		samplePlayer.dataQueue.queue(sample);
-		System.out.println("PLAY TIL END");
-		
+
+		lineOut.start();
+		samplePlayer.dataQueue.queue(sample);
+		System.out.println("GOT SAMPLE, PLAY TIL END");
 		try {
 			int i = 0;
 			do {
@@ -110,7 +134,7 @@ public class RecBuffer {
 	public static void main(String[] args) {
 
 		Synthesizer synth = JSyn.createSynthesizer();
-		RecBuffer recBuffer = new RecBuffer(synth, 1.5f);
+		RecBufferPre recBuffer = new RecBufferPre(synth, 1.5f);
 		recBuffer.start();
 
 		System.out.println("RECORDING");
@@ -128,21 +152,6 @@ public class RecBuffer {
 		Player.playSample(synth, recBuffer.lineOut, fs, true);
 
 		synth.stop();
-	}
-
-	public boolean enabled() {
-		// ...
-		return false;
-	}
-	
-	public RecBuffer enabled(boolean val) {
-		// ...
-		return this;
-	}
-	
-	public boolean toggleEnabled() {
-		// ...
-		return enabled();
 	}
 
 }
