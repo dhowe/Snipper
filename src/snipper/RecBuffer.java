@@ -18,15 +18,26 @@ public class RecBuffer {
 
 	int numFrames;
 
-	public RecBuffer(Synthesizer synth, float lengthSec) {
+	public RecBuffer(Synthesizer s, float lengthSec) {
 
+		synth = s;
+		initSynth();
+		this.length(lengthSec);
+	}
+
+	private void initSynth() {
+		
+		if (channelIn != null)
+			synth.remove(channelIn);
+		if (writer != null)
+		synth.remove(writer);
+		
 		synth.add(channelIn = new ChannelIn());
 		synth.add(writer = new FixedRateMonoWriter());
-		
-		synth.start(SAMPLE_RATE, AudioDeviceManager.USE_DEFAULT_DEVICE, 2,
-				AudioDeviceManager.USE_DEFAULT_DEVICE, 2);
-
-		this.length(lengthSec);
+		if (!synth.isRunning()) {
+			synth.start(SAMPLE_RATE, AudioDeviceManager.USE_DEFAULT_DEVICE, 2,
+					AudioDeviceManager.USE_DEFAULT_DEVICE, 2);
+		}
 	}
 
 	public RecBuffer length(float lengthSec) {
@@ -47,19 +58,26 @@ public class RecBuffer {
 
 	public RecBuffer stop() {
 		
+		channelIn.flattenOutputs();
 		channelIn.output.disconnectAll();
+		writer.input.disconnectAll();
+		writer.flattenOutputs();
+		writer.dataQueue.endFrame();
 		writer.dataQueue.clear();
 		writer.stop();
-		
+
 		return this;
 	}
 	
 	public RecBuffer start() {
 
+		initSynth();
+		
 		sample = new FloatSample(numFrames, 1);
 		channelIn.output.connect(writer.input);
 
 		writer.start(); // b/c writer is not pulled by anything
+		writer.dataQueue.clear();
 		writer.dataQueue.queueLoop(sample, 0, sample.getNumFrames());
 		
 		return this;

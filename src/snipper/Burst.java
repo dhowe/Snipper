@@ -59,8 +59,10 @@ public class Burst {
 		
 		Burst burst = getMaxBurst(frames, soundThresh, silenceThresh);
 
-		if (burst == null)
+		if (burst == null) {
+			System.out.println("null burst");
 			return;
+		}
 
 		result.add(burst);
 		//System.out.println("ADDED[" + result.size() + "] " + burst + " ");
@@ -90,7 +92,11 @@ public class Burst {
 
 		int maxIdx = AudioUtils.absMaxIndex(frames, soundThresh);
 		
+		System.out.print(" maxId="+maxIdx);
+		
 		if (maxIdx < 0) return null;
+		
+		
 		
 		int stopIdx = getBurstStop(frames, maxIdx, silenceThresh);
 		int startIdx = getBurstStart(frames, maxIdx, silenceThresh);

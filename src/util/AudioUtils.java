@@ -46,16 +46,16 @@ public abstract class AudioUtils
 	public static int absMaxIndex(int start, int length, float[] frames, float minThreshold) {
 			
 		int maxIdx = -1;
-		float max = minThreshold;
-		if (start + length > frames.length)
-			throw new RuntimeException("Out of bounds");
-		for (int i = start; i < start+length; i++) {
+		float max = minThreshold; // ??
+
+		for (int i = start; i < Math.min(frames.length, start+length); i++) {
 			float f = Math.abs(frames[i]);
-			if (f > max) {
+			if (f >= max) {
 				max = f;
 				maxIdx = i;
 			}
 		}
+		
 		return maxIdx;
 	}
 

@@ -12,10 +12,11 @@ public class Snip {
 	public static float[] originalFrames;
 	public static float silenceThreshold, soundThreshold;
 	
-	float[] frames; // should this be a clone of the array?
-	int start, length, max;
+	public float[] frames; // should this be a clone of the array?
+	public int start, length, max;
 
 	public Snip(float[] framesI, int startI, int lengthI, int maxI) {
+		
 		frames = cloneArray(framesI);
 		start = startI;
 		length = lengthI;
@@ -35,7 +36,7 @@ public class Snip {
 	
 	public String toString() {
 		
-		return "{ start: " + start + ", stop: " + (start+length) + ", length: " + length + " }";
+		return "{ start: " + start + ", max: " + max + ", stop: " + stop() + ", length: " + length + " }";
 	}
 
 	public static Snip[] getBursts(float[] frames) {
@@ -56,33 +57,43 @@ public class Snip {
 
 	private static void _getBursts(int startIdx, int length, ArrayList<Snip> result) {
 
-		boolean dbug = false;
+		boolean dbug = true;
 		
-		if (dbug) System.out.println("Burst.getBursts(" + result.size() + ")");
-		
+		if (dbug) System.out.print("Burst.getBursts(" + result.size() 
+				+ ") :: "+startIdx+"-"+(startIdx+length-1)+" ");
+				
 		Snip burst = _getMaxBurst(startIdx, length);
+		//{ start: 89928, max: 91373, stop: 98241, length: 8314 }
+		
+		System.out.println(burst!=null);
 		
 		if (burst != null) {
-		
+			
 			result.add(burst);
 			if (dbug) System.out.println("ADDED[" + result.size() + "] " + burst + " ");
 			
 			int minSize = AudioUtils.SAMPLE_RATE / 10;  // at least 1/10 of sec
 			
 			int leftStartIdx = startIdx;
-			int leftEndIdx = burst.start;
-			int leftLength = leftEndIdx - leftStartIdx;
+			int leftEndIdx = burst.start-1;
+			int leftLength = (leftEndIdx - leftStartIdx) + 1;
 			
-			int rightStartIdx = burst.start + burst.length + 1;
-			int rightEndIdx = startIdx + length; // end of clip
-			int rightLength = rightEndIdx - rightStartIdx;
-			
+			if (leftStartIdx > leftEndIdx)
+				throw new RuntimeException("Invalid (left) start="+leftStartIdx+" end="+leftEndIdx);
+
 			if (leftLength > minSize) { 
 			
 				if (dbug) System.out.println("Left: "+leftStartIdx+"-" + leftEndIdx);
 				_getBursts(leftStartIdx, leftLength, result);
 			}
-	
+						
+			int rightStartIdx = burst.start + burst.length;
+			int rightEndIdx = startIdx + length; // end of clip
+			int rightLength = rightEndIdx - rightStartIdx + 1;
+			
+			if (rightStartIdx > rightEndIdx)
+				throw new RuntimeException("Invalid (right) start="+rightStartIdx+" end="+rightEndIdx);
+			
 			if (rightLength > minSize) {
 				
 				if (dbug) System.out.println("Right: "+rightStartIdx+"-" + rightEndIdx);
@@ -91,32 +102,63 @@ public class Snip {
 		}
 	}
 
-	private static Snip _getMaxBurst(int startIdx, int length) {
-
-		int maxIdx = AudioUtils.absMaxIndex(originalFrames, soundThreshold);
+	public static Snip _getMaxBurst(int startIdx, int length) {
 		
-		if (maxIdx < 0) return null;
+		return _getMaxBurst(startIdx, length, 100);
+	}
+	
+	public static Snip _getMaxBurst(int startIdx, int length, int numRequiredForStartStop) {
+
+		int maxIdx = AudioUtils.absMaxIndex(startIdx, length, originalFrames, soundThreshold);
+			
+RecBufferTest.maxId = maxIdx;
+System.out.println(" maxId="+maxIdx);
+
+		if (maxIdx < 0) {
+			//System.out.println(" maxId=-1 ");
+			return null; // no loud enough sound
+		}
+		else {
+			if (maxIdx < startIdx || maxIdx > (startIdx+length-1)) // WORKING HERE (see console)
+				throw new RuntimeException("Invalid State1: maxIdx="+maxIdx+" startIdx="+startIdx+ " stopIdx="+(startIdx+length-1));
+			
+			if (Math.abs(originalFrames[maxIdx]) < soundThreshold)
+				throw new RuntimeException("Invalid State2: maxIdx="+maxIdx+" maxVal="+originalFrames[maxIdx]);
+		}
 		
 		int endIdx = startIdx + length;
-		int snipStopIdx = getBurstStop(maxIdx, endIdx-maxIdx, silenceThreshold);
-		int snipStartIdx = getBurstStart(maxIdx, maxIdx-startIdx, silenceThreshold);
+		int snipStopIdx = getBurstStop(maxIdx, endIdx-maxIdx, silenceThreshold, numRequiredForStartStop);
+		int snipStartIdx = getBurstStart(maxIdx, maxIdx-startIdx, silenceThreshold, numRequiredForStartStop);
 
-		return new Snip(originalFrames, snipStartIdx, snipStopIdx-snipStartIdx, maxIdx);
+		// no stop point found
+		if (snipStopIdx < 0) {
+			//System.out.println("Reset snipStop to "+(startIdx + length - 1));
+			//snipStopIdx = startIdx + length - 1;
+			return null;
+		}
+		
+		// no start point found
+		if (snipStartIdx < 0) {
+			//snipStartIdx = startIdx;
+			return null;
+		}
+		
+		return new Snip(originalFrames, snipStartIdx, (snipStopIdx-snipStartIdx) + 1, maxIdx);
 	}
 
-	public static int getBurstStop(int start, int length, float threshold) {
+	public static int getBurstStop(int start, int length, float threshold, int numRequiredForStop)  {
 
 		int numUnder = 0;
 		int stopIndex = -1;
 		
-		System.out.println("getBurstStop() checking frames "+start+"-"+(start+length-1));
+		//System.out.println("getBurstStop() checking frames "+start+"-"+(start+length-1));
 
-		for (int i = start; i < start + length; i++) {
+		for (int i = start; i < Math.min(originalFrames.length, start + length); i++) {
 			
-			if (originalFrames[i] < threshold) {
+			if (Math.abs(originalFrames[i]) < threshold) {
 				
 				//System.out.println("HIT: "+i);
-				if (++numUnder == 1000) {
+				if (++numUnder == numRequiredForStop) {
 					//System.out.println("STOP-HIT: "+i);
 					stopIndex = i;
 					break;
@@ -128,22 +170,22 @@ public class Snip {
 		}
 		
 		if (stopIndex < 0) {
-			stopIndex = (start + length) - 1;
-			System.out.println("[WARN] No stop point found");
+			//stopIndex = -1; // (start + length) - 1;
+			System.out.print("[WARN] No stop point found: num="+numUnder+"/"+numRequiredForStop);
 		}
 
 
 		return stopIndex;
-	}
-
-	public static int getBurstStart(int start, int length, float threshold) {
+	} 
+	
+	public static int getBurstStart(int start, int length, float threshold, int numRequiredForStart) {
 
 		int numUnder = 0;
 		int startIndex = -1;
 
-		for (int i = start; i > start - length; i--) {
-			if (originalFrames[i] < threshold) {
-				if (++numUnder == 1000) {
+		for (int i = start; i > Math.max(0, start - length); i--) {
+			if (Math.abs(originalFrames[i]) < threshold) {
+				if (++numUnder == numRequiredForStart) {
 					// System.out.println("START-HIT: "+i);
 					startIndex = i;
 					break;
@@ -154,11 +196,15 @@ public class Snip {
 		}
 
 		if (startIndex < 0) {
-			startIndex = (start - length);
-			System.out.println("[WARN] No start point found");
+			//startIndex = -1;//(start - length);
+			System.out.print("[WARN] No start point found "+numUnder+"/"+numRequiredForStart);
 		}
 
 		return startIndex;
+	}
+
+	 public float maxValue() {
+		return frames[max];
 	}
 
 }
