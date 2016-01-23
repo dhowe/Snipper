@@ -6,6 +6,7 @@ import util.SoniaUtils;
 
 import com.jsyn.JSyn;
 import com.jsyn.Synthesizer;
+import com.jsyn.data.FloatSample;
 import com.jsyn.unitgen.LineOut;
 
 public class RecBufferTest extends PApplet {
@@ -15,9 +16,7 @@ public class RecBufferTest extends PApplet {
 	RecBuffer buffer;
 	Snip[] bursts;
 	int off = 10;
-	
-	public static int maxId;
-	
+		
 	static Synthesizer synth;
 	static LineOut lineOut;
 	
@@ -49,15 +48,15 @@ public class RecBufferTest extends PApplet {
 		line(off, s1, width-off, s1);
 		line(off, s2, width-off, s2);
 		
-		float z = PApplet.lerp(0, waveform.width, maxId/buffer.length());
-		line(z, off, z, height-off);
+		//float z = PApplet.lerp(0, waveform.width, maxId/buffer.length());
+		//line(z, off, z, height-off);
 		
     if (bursts != null) {
     	fill(255,0,0,127); // draw bursts
     	for (int i = 0; i < bursts.length; i++) {
 	    	s1 = PApplet.lerp(0, waveform.width,  bursts[i].start / (float) buffer.size());
 	    	s2 = PApplet.lerp(0, waveform.width,  bursts[i].stop() / (float) buffer.size());
-	  		z =  Math.min(1, bursts[i].maxValue()) * waveform.height;
+	  		float z =  Math.min(1, bursts[i].maxValue()) * waveform.height;
 	    	rect(off + s1, centerY-z/2f, s2-s1, z);
     	}
     }
@@ -72,6 +71,11 @@ public class RecBufferTest extends PApplet {
 				bursts = Snip.getBursts(buffer.getCurrentFrames());
 				System.out.println("Found "+bursts.length+" burst(s) :: "+buffer.size());
 				buffer.stop();
+// 				int rand = (int) (Math.random()*bursts.length);
+//				System.out.println("Picked burst: "+rand);
+//
+//				FloatSample floatSample = bursts[rand].toFloatSample();
+//				Player.playSample(synth, lineOut, floatSample, true);
 			}
 			else {
 				bursts = null;

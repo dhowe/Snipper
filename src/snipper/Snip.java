@@ -70,15 +70,14 @@ public class Snip {
 
 	private static void _getBursts(int startIdx, int length, ArrayList<Snip> result) {
 
-		boolean dbug = true;
+		boolean dbug = false;
 		
 		if (dbug) System.out.print("Burst.getBursts(" + result.size() 
 				+ ") :: "+startIdx+"-"+(startIdx+length-1)+" ");
 				
 		Snip burst = _getMaxBurst(startIdx, length);
-		//{ start: 89928, max: 91373, stop: 98241, length: 8314 }
 		
-		System.out.println(burst!=null);
+		if (dbug)System.out.println(burst!=null);
 		
 		if (burst != null) {
 			
@@ -123,36 +122,15 @@ public class Snip {
 	public static Snip _getMaxBurst(int startIdx, int length, int numRequiredForStartStop) {
 
 		int maxIdx = AudioUtils.absMaxIndex(startIdx, length, originalFrames, soundThreshold);
-			
-RecBufferTest.maxId = maxIdx;
-System.out.println(" maxId="+maxIdx);
 
-		if (maxIdx < 0) {
-			//System.out.println(" maxId=-1 ");
-			return null; // no loud enough sound
-		}
-		else {
-			if (maxIdx < startIdx || maxIdx > (startIdx+length-1)) // WORKING HERE (see console)
-				throw new RuntimeException("Invalid State1: maxIdx="+maxIdx+" startIdx="+startIdx+ " stopIdx="+(startIdx+length-1));
-			
-			if (Math.abs(originalFrames[maxIdx]) < soundThreshold)
-				throw new RuntimeException("Invalid State2: maxIdx="+maxIdx+" maxVal="+originalFrames[maxIdx]);
-		}
-		
+		if (maxIdx < 0) return null; // no loud enough sound
+	
 		int endIdx = startIdx + length;
 		int snipStopIdx = getBurstStop(maxIdx, endIdx-maxIdx, silenceThreshold, numRequiredForStartStop);
 		int snipStartIdx = getBurstStart(maxIdx, maxIdx-startIdx, silenceThreshold, numRequiredForStartStop);
 
-		// no stop point found
-		if (snipStopIdx < 0) {
-			//System.out.println("Reset snipStop to "+(startIdx + length - 1));
-			//snipStopIdx = startIdx + length - 1;
-			return null;
-		}
-		
-		// no start point found
-		if (snipStartIdx < 0) {
-			//snipStartIdx = startIdx;
+		// either no stop or no start point found
+		if (snipStopIdx < 0 || snipStartIdx < 0) {
 			return null;
 		}
 		

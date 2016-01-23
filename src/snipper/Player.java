@@ -63,7 +63,7 @@ public class Player {
 					synth.sleepFor(.1);
 				} while (samplePlayer.dataQueue.hasMore());
 			}
-
+ 
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
