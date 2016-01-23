@@ -8,16 +8,12 @@ import com.jsyn.unitgen.*;
 
 public class EchoEffect {
 
-	int SAMPLE_RATE = 44100;
-
 	FixedRateMonoReader reader;
 	FixedRateMonoWriter writer;
 	Synthesizer synth;
 	FloatSample sample;
 	ChannelIn channelIn;
 	ChannelOut channelOut;
-	
-	float delay;
 
 	public EchoEffect() {
 
@@ -30,36 +26,30 @@ public class EchoEffect {
 
 	public void setDelay(float delaySec) {
 
-		this.delay = delaySec;
-		sample = new FloatSample((int) (SAMPLE_RATE * delay), 1);
+		float delay = delaySec;
+		sample = new FloatSample((int) (44100 * delay), 1);
 
 		reader.output.connect(channelOut.input);
 		channelIn.output.connect(writer.input);
 
-		synth.start(SAMPLE_RATE, AudioDeviceManager.USE_DEFAULT_DEVICE, 2,
+		synth.start(44100, AudioDeviceManager.USE_DEFAULT_DEVICE, 2,
 				AudioDeviceManager.USE_DEFAULT_DEVICE, 2);
 
 		writer.start(); // important because writer is not pulled by anything
 		channelOut.start();
 
 		// For a long echo, read cursor should be just in front of the write cursor.
-		reader.dataQueue.queue(sample, 1000, sample.getNumFrames() - 1000);
+		int ahead = 10;
+		reader.dataQueue.queue(sample, ahead, sample.getNumFrames() - ahead);
 
 		// Loop both forever.
 		reader.dataQueue.queueLoop(sample, 0, sample.getNumFrames());
 		writer.dataQueue.queueLoop(sample, 0, sample.getNumFrames());
 	}
 
-	public float[] getCurrentFrames() {
-
-		float[] frames = new float[sample.getNumFrames()];
-		sample.read(frames);
-		return frames;
-	}
-
 	public static void main(String[] args) {
 
-		new EchoEffect().setDelay(1.5f);
+		new EchoEffect().setDelay(.2f);
 	}
 
 }

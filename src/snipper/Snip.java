@@ -31,9 +31,15 @@ public class Snip {
 		return dest;
 	}
 	
-	public FloatSample toFloatSample() {
+	public FloatSample toFloatSample(boolean rev) {
 		float[] f = cloneArray(frames, start, length);
-		return new FloatSample(f); // cache?
+		if (rev) {
+	    for (int j = 0; j < f.length; j++)
+	      f[j] = f[f.length-1-j];
+		}
+		FloatSample fs = new FloatSample(f); // cache?
+		fs.setFrameRate(AudioUtils.SAMPLE_RATE);
+		return fs;
 	}
 	
 	static float[] cloneArray(float[] src, int startIdx, int length) {
@@ -130,9 +136,13 @@ public class Snip {
 		int snipStartIdx = getBurstStart(maxIdx, maxIdx-startIdx, silenceThreshold, numRequiredForStartStop);
 
 		// either no stop or no start point found
-		if (snipStopIdx < 0 || snipStartIdx < 0) {
+		if (snipStopIdx < 0) {
+			snipStopIdx = endIdx - 1;
 			return null;
 		}
+	
+		if (snipStartIdx < 0)
+			return null;
 		
 		return new Snip(originalFrames, snipStartIdx, (snipStopIdx-snipStartIdx) + 1, maxIdx);
 	}
@@ -162,7 +172,7 @@ public class Snip {
 		
 		if (stopIndex < 0) {
 			//stopIndex = -1; // (start + length) - 1;
-			System.out.print("[WARN] No stop point found: num="+numUnder+"/"+numRequiredForStop);
+			//System.out.print("[WARN] No stop point found: num="+numUnder+"/"+numRequiredForStop);
 		}
 
 
@@ -188,7 +198,7 @@ public class Snip {
 
 		if (startIndex < 0) {
 			//startIndex = -1;//(start - length);
-			System.out.print("[WARN] No start point found "+numUnder+"/"+numRequiredForStart);
+			//System.out.print("[WARN] No start point found "+numUnder+"/"+numRequiredForStart);
 		}
 
 		return startIndex;

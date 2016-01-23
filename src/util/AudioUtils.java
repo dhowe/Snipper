@@ -5,7 +5,6 @@ import java.util.Random;
 
 public abstract class AudioUtils
 {
-	public static float INPUT_SENSITIVITY = 1.5f;
 	public static final int SAMPLE_RATE   = 44100;
 	public static final float BASE_MIDI_C = 8.1758224f;
 	public static final int NUM_SMOOTHING_FRAMES = (int)(SAMPLE_RATE/1000f * 3f); // 3 MS

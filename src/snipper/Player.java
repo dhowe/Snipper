@@ -28,6 +28,10 @@ public class Player {
 		return f;
 	}
 	
+	public static void playSample(Synthesizer synth, LineOut lineOut, FloatSample sample) {
+		playSample(synth, lineOut, sample, 0, false);
+	}
+	
 	public static void playSample(Synthesizer synth, LineOut lineOut, 
 			FloatSample sample, boolean blocking) {
 		playSample(synth, lineOut, sample, 0, blocking);
@@ -41,7 +45,7 @@ public class Player {
 	public static void playSample(Synthesizer synth, LineOut lineOut, 
 			FloatSample sample,  int startFrame, int numFrames, boolean blocking) {
 		
-		VariableRateDataReader samplePlayer;
+		
 		try {
 			
 			if (dbug) {
@@ -51,13 +55,20 @@ public class Player {
 				System.out.println("            loopStart = " + sample.getSustainBegin());
 				System.out.println("            loopEnd   = " + sample.getSustainEnd());
 			}
-
+			
+			if (lineOut.getSynthesisEngine() == null) {
+				synth.add(lineOut);
+				lineOut.start();
+			}
+			
+			VariableRateDataReader samplePlayer;
+			
 			synth.add(samplePlayer = new VariableRateMonoReader());
+			
 			samplePlayer.output.connect(0, lineOut.input, 0);
 			samplePlayer.rate.set(sample.getFrameRate());
 			samplePlayer.dataQueue.queue(sample, startFrame, numFrames);
 			
-
 			if (blocking) {
 				do {
 					synth.sleepFor(.1);
@@ -75,6 +86,6 @@ public class Player {
 		synth.add(lineOut);
 		lineOut.start();
 		synth.start();
-		playSample(synth, lineOut, createSample(createFrames()), true);
+		playSample(synth, lineOut, createSample(createFrames()), false);
 	}
 }

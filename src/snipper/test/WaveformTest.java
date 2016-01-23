@@ -1,4 +1,4 @@
-package snipper;
+package snipper.test;
 
 import processing.core.PApplet;
 import processing.core.PGraphics;

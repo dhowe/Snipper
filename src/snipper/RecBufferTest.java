@@ -11,15 +11,16 @@ import com.jsyn.unitgen.LineOut;
 
 public class RecBufferTest extends PApplet {
 	
-	
 	PGraphics waveform;
 	RecBuffer buffer;
 	Snip[] bursts;
-	int off = 10;
+	int off = 10, waveWidth=380, selected = -1;
 		
 	static Synthesizer synth;
 	static LineOut lineOut;
 	
+	double sleepP = 0.1f, triggerP = 0.1f;
+	 
 	public void settings() { 
 		
 	  size(400,200);
@@ -27,8 +28,24 @@ public class RecBufferTest extends PApplet {
 	
 	public void setup(){ 
 
-	  waveform = createGraphics(width-off*2, height-off*2);
-	  buffer = new RecBuffer(synth, 4f);
+	  waveform = createGraphics(waveWidth, height-off*2);
+	  buffer = new RecBuffer(synth, 5f);
+		buffer.start();
+		
+	  new Thread() {
+	  	
+			public void run() {
+	  		while (true) {
+		  		try {
+		  			synth.sleepFor(sleepP);
+					} catch (InterruptedException e) {}
+		  		if (Math.random()< triggerP) {
+		  			bursts = Snip.getBursts(buffer.getCurrentFrames());
+		  			trigger();
+		  		}
+	  		}
+	  	};
+	  }.start();
 	} 
 	 
 	public void draw() {
@@ -40,46 +57,59 @@ public class RecBufferTest extends PApplet {
 		}
 		
 		image(waveform, off, off);
-		stroke(0,255,0);
+		
+		drawThreshold(Snip.SOUND_THRESHOLD);
+		
+		
+		drawBursts();
+	}
 
-		float centerY = off + waveform.height/2f;
-		float s1 = centerY - (waveform.height * Snip.SOUND_THRESHOLD);
-		float s2 = centerY + (waveform.height * Snip.SOUND_THRESHOLD);
+	private void drawThreshold(float thresh) {
+		float s1 = (off + waveform.height/2f) - (waveform.height * thresh);
+		float s2 = (off + waveform.height/2f) + (waveform.height * thresh);
+		stroke(0,255,0);
 		line(off, s1, width-off, s1);
 		line(off, s2, width-off, s2);
-		
-		//float z = PApplet.lerp(0, waveform.width, maxId/buffer.length());
-		//line(z, off, z, height-off);
-		
-    if (bursts != null) {
-    	fill(255,0,0,127); // draw bursts
-    	for (int i = 0; i < bursts.length; i++) {
-	    	s1 = PApplet.lerp(0, waveform.width,  bursts[i].start / (float) buffer.size());
-	    	s2 = PApplet.lerp(0, waveform.width,  bursts[i].stop() / (float) buffer.size());
-	  		float z =  Math.min(1, bursts[i].maxValue()) * waveform.height;
-	    	rect(off + s1, centerY-z/2f, s2-s1, z);
-    	}
-    }
+	}
+
+	private void drawBursts() {
+    if (bursts == null) return;
+    
+		float centerY = off + waveform.height/2f;
+		for (int i = 0; i < bursts.length; i++) {
+			float s1 = PApplet.lerp(0, waveform.width,  bursts[i].start / (float) buffer.size());
+			float s2 = PApplet.lerp(0, waveform.width,  bursts[i].stop() / (float) buffer.size());
+			float z =  Math.min(1, bursts[i].maxValue()) * waveform.height;
+			fill(0,0,255,127);
+			if (i == selected)
+				fill(255,0,0,127); 
+			rect(off + s1, centerY-z/2f, s2-s1, z);
+		}
 	} 
 	
 	@Override
 	public void keyPressed() {
+		//if (key == ' ') {trigger();}
+	}
+
+	private synchronized void trigger() {
 		
-		if (key == ' ') {
-			
-			if (buffer.enabled()) {
-				bursts = Snip.getBursts(buffer.getCurrentFrames());
-				System.out.println("Found "+bursts.length+" burst(s) :: "+buffer.size());
-				buffer.stop();
-// 				int rand = (int) (Math.random()*bursts.length);
-//				System.out.println("Picked burst: "+rand);
-//
-//				FloatSample floatSample = bursts[rand].toFloatSample();
-//				Player.playSample(synth, lineOut, floatSample, true);
+		//if (buffer == null) return;
+		
+		if (buffer.enabled()) {
+			//bursts = Snip.getBursts(buffer.getCurrentFrames());
+			boolean pickOne = bursts.length > 0 && true; 
+			if (pickOne) {
+				selected = (int) (Math.random()*bursts.length);
+				System.out.println("Burst.Idx="+selected+"/"+bursts.length);
+				FloatSample floatSample = bursts[selected].toFloatSample(true);
+				Player.playSample(synth, lineOut, floatSample, false);
 			}
 			else {
-				bursts = null;
-				buffer.start();
+				for (int i = 0; i < bursts.length; i++) {
+					FloatSample floatSample = bursts[i].toFloatSample(true);
+					Player.playSample(synth, lineOut, floatSample, false);
+				}
 			}
 		}
 	}

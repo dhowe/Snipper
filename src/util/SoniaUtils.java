@@ -11,11 +11,8 @@ import com.softsynth.jsyn.Synth;
 public class SoniaUtils
 {
 	static float NOISE_THRESHOLD = 0.001f;
-	
-	static final int SAMPLE_RATE = 44100;
 	static final float INPUT_SENSITIVITY = 1.5f;
-  static final float BASE_MIDI_C = 8.1758224f;
-  static final int NUM_SMOOTHING_FRAMES = (int)(SAMPLE_RATE/1000f * 3f); // 3 MS
+  static final int NUM_SMOOTHING_FRAMES = (int)(AudioUtils.SAMPLE_RATE/1000f * 3f); // 3 MS
 
 	public static float[] frames(Sample s) {
 
@@ -24,24 +21,23 @@ public class SoniaUtils
   	return frames;
 	}
 	
-	
   public static void listAudioDevices() {
-  	
-      AudioDeviceManager audioManager = AudioDeviceFactory.createAudioDeviceManager();
+	
+    AudioDeviceManager audioManager = AudioDeviceFactory.createAudioDeviceManager();
 
-      int numDevices = audioManager.getDeviceCount();
-      for (int i = 0; i < numDevices; i++) {
-          String deviceName = audioManager.getDeviceName(i);
-          int maxInputs = audioManager.getMaxInputChannels(i);
-          int maxOutputs = audioManager.getMaxInputChannels(i);
-          boolean isDefaultInput = (i == audioManager.getDefaultInputDeviceID());
-          boolean isDefaultOutput = (i == audioManager.getDefaultOutputDeviceID());
-          System.out.println("#" + i + " : " + deviceName);
-          System.out.println("  max inputs : " + maxInputs
-                  + (isDefaultInput ? "   (default)" : ""));
-          System.out.println("  max outputs: " + maxOutputs
-                  + (isDefaultOutput ? "   (default)" : ""));
-      }
+    int numDevices = audioManager.getDeviceCount();
+    for (int i = 0; i < numDevices; i++) {
+      String deviceName = audioManager.getDeviceName(i);
+      int maxInputs = audioManager.getMaxInputChannels(i);
+      int maxOutputs = audioManager.getMaxInputChannels(i);
+      boolean isDefaultInput = (i == audioManager.getDefaultInputDeviceID());
+      boolean isDefaultOutput = (i == audioManager.getDefaultOutputDeviceID());
+      System.out.println("#" + i + " : " + deviceName);
+      System.out.println("  max inputs : " + maxInputs
+              + (isDefaultInput ? "   (default)" : ""));
+      System.out.println("  max outputs: " + maxOutputs
+              + (isDefaultOutput ? "   (default)" : ""));
+    }
   }
   
   public static void drawInputMeterVertical(PApplet p, int x, int y, int w, int h)
