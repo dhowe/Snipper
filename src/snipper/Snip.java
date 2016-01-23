@@ -2,22 +2,24 @@ package snipper;
 
 import java.util.ArrayList;
 
+import com.jsyn.data.FloatSample;
+
 import util.AudioUtils;
 
 public class Snip {
 
-	public static float SILENCE_THRESHOLD = .005f;
+	public static float SILENCE_THRESHOLD = .01f;
 	public static float SOUND_THRESHOLD = .1f;
 	
 	public static float[] originalFrames;
 	public static float silenceThreshold, soundThreshold;
 	
-	public float[] frames; // should this be a clone of the array?
+	public float[] frames;
 	public int start, length, max;
 
 	public Snip(float[] framesI, int startI, int lengthI, int maxI) {
 		
-		frames = cloneArray(framesI);
+		frames = cloneArray(framesI); // clone or no?
 		start = startI;
 		length = lengthI;
 		max = maxI;
@@ -26,6 +28,17 @@ public class Snip {
 	static float[] cloneArray(float[] src) {
 		float[] dest = new float[src.length];
 		System.arraycopy(src, 0, dest, 0, src.length );
+		return dest;
+	}
+	
+	public FloatSample toFloatSample() {
+		float[] f = cloneArray(frames, start, length);
+		return new FloatSample(f); // cache?
+	}
+	
+	static float[] cloneArray(float[] src, int startIdx, int length) {
+		float[] dest = new float[length];
+		System.arraycopy(src, startIdx, dest, 0, length);
 		return dest;
 	}
 
