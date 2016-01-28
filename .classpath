@@ -6,6 +6,7 @@
 	<classpathentry kind="lib" path="jportaudio.jar"/>
 	<classpathentry kind="lib" path="jsyn.jar" sourcepath="/Users/dhowe/git/jsyn/src"/>
 	<classpathentry kind="lib" path="junit.jar"/>
+	<classpathentry kind="lib" path="G4P.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/sonia"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

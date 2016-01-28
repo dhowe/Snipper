@@ -7,12 +7,14 @@ import com.jsyn.Synthesizer;
 import com.jsyn.data.FloatSample;
 import com.jsyn.devices.AudioDeviceManager;
 import com.jsyn.unitgen.*;
+import com.jsyn.unitgen.PeakFollower;
 
 public class RecBuffer {
 
 	static Synthesizer synth;
 
 	FixedRateMonoWriter writer;
+	PeakFollower follower;
 	FloatSample sample;
 	ChannelIn channelIn;
 
@@ -33,13 +35,21 @@ public class RecBuffer {
 		if (writer != null)
 			synth.remove(writer);
 		
+		synth.add(follower = new PeakFollower());
 		synth.add(channelIn = new ChannelIn());
 		synth.add(writer = new FixedRateMonoWriter());
 		
+		channelIn.output.connect(follower.input);
+
 		if (!synth.isRunning()) {
-			synth.start(AudioUtils.SAMPLE_RATE, AudioDeviceManager.USE_DEFAULT_DEVICE, 2,
+			synth.start(AudioUtils.SAMPLE_RATE, AudioDeviceManager.USE_DEFAULT_DEVICE, 1,
 					AudioDeviceManager.USE_DEFAULT_DEVICE, 2);
 		}
+	}
+	
+	public float inputLevel() {
+		
+		return (float) follower.output.get();
 	}
 
 	public RecBuffer length(float lengthSec) {
@@ -62,6 +72,9 @@ public class RecBuffer {
 		
 		channelIn.flattenOutputs();
 		channelIn.output.disconnectAll();
+		
+		follower.stop();
+
 		writer.input.disconnectAll();
 		writer.flattenOutputs();
 		writer.dataQueue.endFrame();
@@ -78,6 +91,8 @@ public class RecBuffer {
 		sample = new FloatSample(numFrames, 1);
 		channelIn.output.connect(writer.input);
 		
+		follower.start();
+
 		writer.start(); // b/c writer is not pulled by anything
 		writer.dataQueue.clear();
 		writer.dataQueue.queueLoop(sample, 0, sample.getNumFrames());
